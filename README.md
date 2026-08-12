@@ -4,9 +4,9 @@
 
 <h1 align="center">Nastaliq Web</h1>
 
-![Nastaliq Web](images/small_promo.png)
-
 **Nastaliq Web** is a Chrome extension that re-renders Urdu text on any webpage in a proper Nastaliq typeface, instead of whatever default font the site ships with — no more squashed, hard-to-read Urdu on sites that only bother styling English.
+
+![Same Urdu paragraph in a default fallback font versus Nastaliq Web's default font](images/comparison.png)
 
 - [What it does](#what-it-does)
 - [Install](#install)
