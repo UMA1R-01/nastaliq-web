@@ -1,147 +1,207 @@
-(function() {
-	if(window.hasRun) return true;
+(function () {
+  if (window.hasRun) return true;
   window.hasRun = true;
 
-  var containerTags = ['DIV','SPAN','P','B','I','U','STRONG','LI','EM','TD','A','H1','H2','H3','H4','H5','H6'];
+  var containerTags = ['DIV', 'SPAN', 'P', 'B', 'I', 'U', 'STRONG', 'LI', 'EM', 'TD', 'A', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
 
-	function isRTL(str){           
-	  var urArray = ["ا", "ب", "ج", "د", "ن", "ی"]
-	  var intersection = urArray.filter(value => str.split('').includes(value));
-	  return intersection.length > 0;
-	};
+  // Arabic-script Unicode blocks -- covers Urdu plus the wider Perso-Arabic range
+  // (base letters, presentation forms, extensions, diacritics, Arabic-Indic digits).
+  var ARABIC_RUN_SOURCE = '[\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF]';
+  var ARABIC_SCRIPT_TEST = new RegExp(ARABIC_RUN_SOURCE);
 
-	function applyScaling(node,data){
-		if(!data.fontScale) return;
-		node.setAttribute('data-urtext-fontscale', data.fontScale);
-		var xStyle = node.getAttribute('style') || '';
-		node.setAttribute('style', xStyle.replace(/;urt;.+;urt;/, ''));
+  function hasUrduScript(str) {
+    return ARABIC_SCRIPT_TEST.test(str);
+  }
 
-  	var xSize = parseFloat(window.getComputedStyle(node).fontSize);
-  	var xHeight = parseFloat(window.getComputedStyle(node).lineHeight);
+  function getContainer(node) {
+    var parent = node.parentElement;
+    if (parent == undefined || !containerTags.includes(parent.tagName)) parent = node;
+    return parent;
+  }
 
-  	var nSize = Math.round(data.fontScale/100 * xSize);
-  	var nHeight = Math.round(data.lineScale/100 * xHeight);
-  	var urtStyle = ';urt;font-size:'+nSize+'px;line-height:'+nHeight+'px;urt;';
-  	
-  	xStyle = node.getAttribute('style');
-  	node.setAttribute('style', xStyle+urtStyle);
-	}
+  function applyScaling(el, data) {
+    if (!data.fontScale) return;
+    el.setAttribute('data-urtext-fontscale', data.fontScale);
+    el.setAttribute('data-urtext-linescale', data.lineScale);
+    var xStyle = (el.getAttribute('style') || '').replace(/;urt;.+;urt;/, '');
 
-	function getParent(node){
-		var divParent = node.parentElement;
-		if(divParent == undefined || !containerTags.includes(node.parentElement.tagName))
-			divParent = node; //self
-		return divParent;
-	}
+    // Percentages must always be computed from the element's true, unscaled
+    // size -- not from getComputedStyle(), which would reflect whatever was
+    // last applied and cause each adjustment to compound off the last one.
+    var baseSize = el.getAttribute('data-urtext-basefontsize');
+    var baseHeight = el.getAttribute('data-urtext-baselineheight');
+    if (baseSize === null) {
+      baseSize = parseFloat(window.getComputedStyle(el).fontSize);
+      baseHeight = parseFloat(window.getComputedStyle(el).lineHeight);
+      el.setAttribute('data-urtext-basefontsize', baseSize);
+      el.setAttribute('data-urtext-baselineheight', baseHeight);
+    } else {
+      baseSize = parseFloat(baseSize);
+      baseHeight = parseFloat(baseHeight);
+    }
 
-	function setStyle(node,data){
-	  // setting text-align in nearest parent
-	  var divParent = getParent(node);
-	  divParent.classList.add("urtext-parent");
-	  node.classList.add("urtext-self");
-	  node.classList.add("urtext-font-"+data.font);
-	  applyScaling(node,data);
-	}
+    var nSize = Math.round(data.fontScale / 100 * baseSize);
+    var nHeight = Math.round(data.lineScale / 100 * baseHeight);
 
-	function recursiveApply(node,data){
-		if(node.nodeName == '#text' && isRTL(node.textContent)){
-			setStyle(node.parentNode,data);
-		}else if((node.nodeName == 'INPUT' || node.nodeName == 'TEXTAREA') && node.type !== 'hidden'){
-			isRTL(node.value) ? setStyle(node,data) : fontClear(node);
-		}else if(node == document || (typeof node.className == 'string' && node.className.search('urtext-self') == -1)){
-			// some nodes like svg have object className instead of string
-			// preventing to run on newly created span
-			[].forEach.call(node.childNodes, function(n){ recursiveApply(n,data); });
-		}
-	}
+    el.setAttribute('style', xStyle + ';urt;font-size:' + nSize + 'px;line-height:' + nHeight + 'px;urt;');
+  }
 
-	function switchFontAll(node,font){
-		node.querySelectorAll("[class*='urtext-font-']").forEach(element => {
-	  	element.classList.forEach(c => {
-	  		if(c.search("urtext-font") > -1){
-	  			element.classList.remove(c);
-	  			element.classList.add("urtext-font-"+font);
-	  		}
-	  	});
-		});
-	}
+  // Wraps only the contiguous Urdu/Arabic-script runs inside a text node in a
+  // styled span, leaving other-language text as plain sibling text nodes --
+  // this is what keeps English text sharing a tag from getting the Urdu font.
+  function wrapRuns(textNode, data) {
+    var text = textNode.textContent;
+    var matches = text.match(new RegExp(ARABIC_RUN_SOURCE + '+', 'g'));
+    if (!matches) return;
 
-	function switchScalingAll(node,data){
-		node.querySelectorAll("[class*='urtext-font-']").forEach(element => {
-	  	applyScaling(element, data);
-		});
-	}
+    // getContainer expects an element (it falls back to returning its argument
+    // unchanged) -- pass the text node's parent, not the text node itself, or
+    // the fallback path hands back a Text node with no .classList and throws.
+    getContainer(textNode.parentElement).classList.add('urtext-parent');
 
-	function sameFont(aNode,font){
-		var same = false;
-		aNode.classList.forEach(c => { if(c == 'urtext-font-'+font) same = true; });
-		return same;
-	}
+    var frag = document.createDocumentFragment();
+    var spans = [];
+    var lastIndex = 0;
+    var re = new RegExp(ARABIC_RUN_SOURCE + '+', 'g');
+    var m;
+    while ((m = re.exec(text))) {
+      if (m.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+      var span = document.createElement('span');
+      span.className = 'urtext-self urtext-font-' + data.font;
+      span.textContent = m[0];
+      frag.appendChild(span);
+      spans.push(span);
+      lastIndex = m.index + m[0].length;
+    }
+    if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
 
-	function sameScaling(aNode,data){
-		let fontScale = parseInt(aNode.getAttribute('data-urtext-fontscale') || 0);
-		let lineScale = parseInt(aNode.getAttribute('data-urtext-linescale') || 0);
-		return fontScale === data.fontScale && lineScale === data.lineScale;
-	}
+    if (!textNode.parentNode) return;
+    textNode.parentNode.replaceChild(frag, textNode);
+    // Scaling reads getComputedStyle(), which only reflects the real page
+    // cascade once these spans are actually attached -- do this after insertion.
+    spans.forEach(function (span) { applyScaling(span, data); });
+  }
 
-	function fontApply(node,data){
-		let exsNode = node.querySelector("[class*='urtext-font-']");
-		// If an element found with style, check its font before switching, otherwise apply first time
-		if(exsNode){			
-			if(!sameFont(exsNode,data.font)) switchFontAll(node,data.font);
-			if(!sameScaling(exsNode,data)) switchScalingAll(node,data);
-		}else{ recursiveApply(node,data); }
-	}
+  function applyToField(field, data) {
+    getContainer(field).classList.add('urtext-parent');
+    field.classList.add('urtext-self');
+    field.classList.add('urtext-font-' + data.font);
+    applyScaling(field, data);
+  }
 
-	function fontClear(node){
-		// in case of input & textarea change to LTR or empty, we need parent of 'urtext-parent'
-		if(node.childNodes.length == 0) node = getParent(node).parentNode;
-		if(node == undefined) return;
-		node.querySelectorAll("[class*='urtext-']").forEach(node => {
-	  	node.className.split(' ').forEach(c => { if(c.search("urtext-") > -1) node.classList.remove(c); });
-	  	let xStyle = node.getAttribute('style') || '';
-	  	node.setAttribute('style', xStyle.replace(/;urt;.+;urt;/, ''));
-	  	node.removeAttribute('data-urtext-fontscale');
-	  	node.removeAttribute('data-urtext-linescale');
-		});
-	}
+  function clearSubtree(root) {
+    if (!root) return;
+    var candidates = [];
+    if (root.nodeType === Node.ELEMENT_NODE) {
+      if (root.matches('.urtext-parent, .urtext-self')) candidates.push(root);
+      root.querySelectorAll('.urtext-parent, .urtext-self').forEach(function (el) { candidates.push(el); });
+    }
+    candidates.forEach(function (el) {
+      el.classList.remove('urtext-parent');
+      if (!el.classList.contains('urtext-self')) return;
 
-	function actionApply(node){
-		// 1. On re-installation, this script may get orphan and will throw error 
-		// 		on storage request, checking runtime will save fatal error.
-		// 2.	Check if node isn't an html element (e.g. ajax loaded text, SVG)
-		if(chrome.runtime == undefined || chrome.runtime.id == undefined ||
-			['IMG','IFRAME','SCRIPT','LINK'].indexOf(node.nodeName) > -1 ||
-			typeof node.querySelector == 'undefined') return;
-		if(node.nodeName == '#document') node = document.body;
-		//if(node.nodeName == 'BODY') console.log('Applying on Full body');
-		chrome.storage.sync.get(['active','font','fontScale','lineScale'], function(data){
-			data.active ? fontApply(node, data) : fontClear(node);
-		});
-	}
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.className.split(' ').forEach(function (c) { if (c.indexOf('urtext-') === 0) el.classList.remove(c); });
+        var xStyle = el.getAttribute('style') || '';
+        el.setAttribute('style', xStyle.replace(/;urt;.+;urt;/, ''));
+        el.removeAttribute('data-urtext-fontscale');
+        el.removeAttribute('data-urtext-linescale');
+        el.removeAttribute('data-urtext-basefontsize');
+        el.removeAttribute('data-urtext-baselineheight');
+      } else {
+        var parent = el.parentNode;
+        if (parent) {
+          parent.replaceChild(document.createTextNode(el.textContent), el);
+          parent.normalize();
+        }
+      }
+    });
+  }
 
-	chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
-		if(request.message == 'urtextApply'){
-			actionApply(document);
-			sendResponse({success: true});
-		}
-	});
-	
-	var observer = new MutationObserver(function(mutations) {
-		mutations.forEach(function(mutation) {
-			for (var i = 0; i < mutation.addedNodes.length; i++)
-				actionApply(mutation.addedNodes[i]);
-		})
-	});
-	observer.observe(document.documentElement, { childList: true, subtree: true });
+  function recursiveApply(node, data) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (hasUrduScript(node.textContent)) wrapRuns(node, data);
+      return;
+    }
+    if (node.nodeName === 'INPUT' || node.nodeName === 'TEXTAREA') {
+      if (node.type !== 'hidden') {
+        hasUrduScript(node.value) ? applyToField(node, data) : clearSubtree(node);
+      }
+      return;
+    }
+    var isDocumentRoot = node.nodeType === Node.DOCUMENT_NODE;
+    var isPlainElement = node.nodeType === Node.ELEMENT_NODE && !node.classList.contains('urtext-self');
+    if (isDocumentRoot || isPlainElement) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (child) { recursiveApply(child, data); });
+    }
+  }
 
-  document.querySelectorAll("input,textarea").forEach(input => {
-		input.addEventListener('input', function(event){
-	    actionApply(event.target);
-	  });
-	});
+  function sameFont(el, font) {
+    return el.classList.contains('urtext-font-' + font);
+  }
 
-  // final call
+  function sameScaling(el, data) {
+    var fontScale = parseInt(el.getAttribute('data-urtext-fontscale') || 0, 10);
+    var lineScale = parseInt(el.getAttribute('data-urtext-linescale') || 0, 10);
+    return fontScale === data.fontScale && lineScale === data.lineScale;
+  }
+
+  function switchFontAll(root, font) {
+    root.querySelectorAll("[class*='urtext-font-']").forEach(function (el) {
+      Array.prototype.slice.call(el.classList).forEach(function (c) {
+        if (c.indexOf('urtext-font-') === 0) el.classList.remove(c);
+      });
+      el.classList.add('urtext-font-' + font);
+    });
+  }
+
+  function switchScalingAll(root, data) {
+    root.querySelectorAll("[class*='urtext-font-']").forEach(function (el) { applyScaling(el, data); });
+  }
+
+  function fontApply(root, data) {
+    var existing = root.nodeType === Node.ELEMENT_NODE && root.matches("[class*='urtext-font-']")
+      ? root
+      : root.querySelector("[class*='urtext-font-']");
+    if (existing) {
+      if (!sameFont(existing, data.font)) switchFontAll(root, data.font);
+      if (!sameScaling(existing, data)) switchScalingAll(root, data);
+    } else {
+      recursiveApply(root, data);
+    }
+  }
+
+  function actionApply(node) {
+    // 1. On re-installation this script may go orphan; checking runtime avoids a fatal error.
+    // 2. Skip nodes that can't meaningfully carry Urdu text or can't be queried into.
+    if (chrome.runtime == undefined || chrome.runtime.id == undefined ||
+      ['IMG', 'IFRAME', 'SCRIPT', 'LINK', 'STYLE'].indexOf(node.nodeName) > -1 ||
+      typeof node.querySelectorAll === 'undefined') return;
+    if (node.nodeName === '#document') node = document.body;
+
+    chrome.storage.sync.get(['active', 'font', 'fontScale', 'lineScale'], function (data) {
+      data.active ? fontApply(node, data) : clearSubtree(node);
+    });
+  }
+
+  chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (request.message === 'urtextApply') {
+      actionApply(document);
+      sendResponse({ success: true });
+    }
+  });
+
+  var observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
+      for (var i = 0; i < mutation.addedNodes.length; i++) actionApply(mutation.addedNodes[i]);
+    });
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  document.querySelectorAll('input,textarea').forEach(function (input) {
+    input.addEventListener('input', function (event) { actionApply(event.target); });
+  });
+
   actionApply(document.body);
 
 })();

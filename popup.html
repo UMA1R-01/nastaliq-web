@@ -2,16 +2,16 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" type="text/css" href="css/fonts.css" >
-    <link rel="stylesheet" type="text/css" href="css/inject.css" >
-    <link rel="stylesheet" type="text/css" href="css/popup.css" >
-    <link rel="stylesheet" type="text/css" href="css/switch.css" >
+    <link rel="stylesheet" type="text/css" href="css/fonts.css">
+    <link rel="stylesheet" type="text/css" href="css/inject.css">
+    <link rel="stylesheet" type="text/css" href="css/popup.css">
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
     <style type="text/css">
       .radio label{ font-size: 16px; }
     </style>
   </head>
-  <body style="width: 160px;">
-    
+  <body style="width: 190px;">
+
     <div class="onoffswitch" style="text-align: right;">
       <label class="toggle">
         <span class="toggle-label" id="switchActiveLabel" style="font-weight: 700;">Enabled</span>
@@ -21,54 +21,44 @@
     </div>
 
     <hr/>
-    
+
     <div class="font-size">
       Font Size:
       <div class="value-button minus" id="fs-decrease">-</div>
-      <input type="text" id="fs-number" value="100%" disabled="disabled" />
+      <input type="text" id="fs-number" value="100%" />
       <div class="value-button plus" id="fs-increase">+</div>
     </div>
-    
+
     <hr/>
-    
+
     <div class="line-height">
       Line Height:
       <div class="value-button minus" id="lh-decrease">-</div>
-      <input type="text" id="lh-number" value="100%" disabled="disabled" />
+      <input type="text" id="lh-number" value="100%" />
       <div class="value-button plus" id="lh-increase">+</div>
+    </div>
+
+    <div class="onoffswitch link-sizes" style="text-align: right;">
+      <label class="toggle">
+        <span class="toggle-label" id="linkSizesLabel">Sync sizes</span>
+        <input class="toggle-checkbox" type="checkbox" id="linkSizes" checked>
+        <div class="toggle-switch"></div>
+      </label>
     </div>
 
     <hr/>
 
     <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-mehr_nastaliq_web">مھر نستعلیق ویب<input type="radio" name="fontSelect" value="mehr_nastaliq_web"></label>
+      <label class="urtext-self urtext-font-jameel-noori-nastaleeq">نوری نستعلیق<input type="radio" name="fontSelect" value="jameel-noori-nastaleeq" checked></label>
     </div>
     <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-jameel-noori-nastaleeq">نوری نستعلیق<input type="radio" name="fontSelect" value="jameel-noori-nastaleeq"></label>
+      <label class="urtext-self urtext-font-mehr_nastaliq_web">مھر نستعلیق ویب<input type="radio" name="fontSelect" value="mehr_nastaliq_web"></label>
     </div>
     <div class="radio urtext-parent">
       <label class="urtext-self urtext-font-jameel-noori-kasheeda">نستعلیق کشیدہ<input type="radio" name="fontSelect" value="jameel-noori-kasheeda"></label>
     </div>
     <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-nafees-naskh">نفیس نسخ<input type="radio" name="fontSelect" value="nafees-naskh"></label>
-    </div>
-    <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-rouqa">رقعه یونیکوڈ<input type="radio" name="fontSelect" value="rouqa"></label>
-    </div>
-    <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-alqalam-shakir">القلم شاکر<input type="radio" name="fontSelect" value="alqalam-shakir"></label>
-    </div>
-    <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-alqalam-tehreeri">القلم تحریری<input type="radio" name="fontSelect" value="alqalam-tehreeri"></label>
-    </div>
-    <div class="radio urtext-parent">
       <label class="urtext-self urtext-font-nafees-web-naskh">نفیس ویب نسخ<input type="radio" name="fontSelect" value="nafees-web-naskh"></label>
-    </div>
-    <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-pdms-bukhari">بخاری<input type="radio" name="fontSelect" value="pdms-bukhari"></label>
-    </div>
-    <div class="radio urtext-parent">
-      <label class="urtext-self urtext-font-pdms-pencil-nafees">پنسل نفیس<input type="radio" name="fontSelect" value="pdms-pencil-nafees"></label>
     </div>
 
     <script src="popup.js"></script>

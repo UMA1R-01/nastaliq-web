@@ -1,44 +1,64 @@
-# Tahajji
-Chrome Extension to override fonts for Urdu Language
+<p align="center">
+  <img src="images/128.png" width="96" alt="Nastaliq Web logo">
+</p>
 
-![imagename](https://github.com/simptive/tahajji/blob/master/images/small_promo.png)
+<h1 align="center">Nastaliq Web</h1>
 
-[Chrome Web Store Link](https://chrome.google.com/webstore/detail/tahajji-urdu-reader/bknnphpbomfgdlmpgmnjhmbakpohppee)
+![Nastaliq Web](images/small_promo.png)
 
-## Description:
+**Nastaliq Web** is a Chrome extension that re-renders Urdu text on any webpage in a proper Nastaliq typeface, instead of whatever default font the site ships with — no more squashed, hard-to-read Urdu on sites that only bother styling English.
 
-Urdu Reader is an open-source browser extension designed to enhance the reading experience of Urdu content on the web. This GitHub project addresses common issues faced by users who are dissatisfied with default Urdu fonts provided by websites or experience compatibility problems with existing extensions on social media pages. Additionally, it caters to Linux users who may find Urdu fonts in the browser challenging to read.
+- [What it does](#what-it-does)
+- [Install](#install)
+- [Using it](#using-it)
+- [Credits](#credits)
 
-## Key Features:
+## What it does
 
-1. **Independent of the HTML tags:** Efficiently detects Urdu characters wihtout relying on DOM meta data like DIR="rtl". It can even convert Urdu text mixed with other languages.
+Most websites either serve Urdu in a flat, hard-to-read font or don't style it for Urdu at all — especially outside Pakistan/India-focused sites, or on Linux where the system's default Urdu fonts are often poor. Nastaliq Web scans every page you visit for Urdu text — regardless of how the page is marked up — and swaps in a font you actually want to read.
 
-2. **Handles dynamically loaded content:** It activates after the page is initially completes loading but after that, handles dynamically loaded (AJAX) content without refreshing the page.
+- **Detects Urdu by content, not markup.** It checks for actual Arabic-script Unicode characters rather than relying on `dir="rtl"` or other DOM hints, so it works even on pages that don't bother marking Urdu text as Urdu.
+- **Only touches the Urdu, not the rest of the tag.** If a paragraph mixes Urdu and English in the same element, only the Urdu run gets the new font — English text next to it keeps its original font instead of getting dragged along.
+- **Keeps working as the page changes.** Once a page finishes loading, the extension keeps watching for content added dynamically (infinite scroll, AJAX-loaded posts, etc.) and re-applies the font without a refresh.
+- **Font choice.** Four curated fonts — Jameel Noori Nastaleeq (default), Mehr Nastaliq Web, Jameel Noori Kasheeda, and Nafees Web Naskh.
+- **Size and line height controls.** Type an exact percentage or use the +/− steppers. A sync toggle keeps the two moving together, or lets you set them independently.
+- **Remembers your settings.** Once you set a font, size, and line height, they persist — no reconfiguring per session.
 
-3. **Font Customization:** Urdu Reader provides a variety of fonts to choose from, allowing users to select the one that suits their preferences and readability.
+## Install
 
-4. **Font Size Adjustment:** Users can easily adjust the font size to ensure comfortable reading, catering to their visual needs.
+Nastaliq Web isn't on the Chrome Web Store yet, so for now it installs the same way any unpacked extension does:
 
-5. **Line Height Control:** The extension also allows users to control the line height, further improving the legibility of Urdu text on webpages.
+1. Download the latest release: **[Releases → nastaliq-web.zip](https://github.com/UMA1R-01/nastaliq-web/releases/latest)**
+2. Unzip it somewhere you'll keep it (don't delete the folder afterwards — Chrome loads the extension directly from it).
+3. Open `chrome://extensions` in Chrome.
+4. Turn on **Developer mode** (top-right toggle).
+5. Click **Load unpacked** and select the unzipped folder.
 
-6. **Saves your settings:** Font selection, size and line-height settings don't need to re-configure everytime.
+That's it — the Nastaliq Web icon should appear in your toolbar, and Urdu text on any page you visit will switch to the default font automatically.
 
-## Limitations:
+## Using it
 
-* When the Font is applied to an HTML tag that contains other language e.g. English characters, its font is also changed (but still readable in the same language).
-* Only global settings, it can't save different setting for each website.
+Click the toolbar icon to open the popup:
 
-## Setting up the project:
+- **Enabled/Disabled** — turn the extension on or off entirely.
+- **Font Size / Line Height** — type a percentage directly, or use the +/− buttons. Toggle **Sync sizes** to move both together, or turn it off to set them independently.
+- **Font list** — pick whichever of the four bundled fonts reads best to you.
 
-Clone the repostitory and open as a project in your favorite editor. Open Chrome, go to Options > Extensions > Manage Extensions > Load Unpacked and select working directory.
+Changes apply immediately to the page you're viewing.
 
-## License:
+## Known fonts included
 
-Released under the [MIT License](https://opensource.org/license/mit/).
+| Font | Style |
+|---|---|
+| Jameel Noori Nastaleeq (default) | Classic Nastaleeq, Pakistan's most widely used Urdu font |
+| Mehr Nastaliq Web | Modern, web-optimized Nastaliq |
+| Jameel Noori Kasheeda | Elongated/stylized Nastaleeq variant |
+| Nafees Web Naskh | Naskh-style, more upright and book-like |
 
-## Contributions:
+## License
 
-This open-source project encourages contributions from the developer community to improve and expand its features. Developers can participate by submitting code enhancements, bug fixes, or new font additions to enhance the overall Urdu reading experience for users. Feel free to contribute to the project on GitHub to make Urdu content more accessible and enjoyable for everyone.
+Released under the [MIT License](LICENSE).
 
-Checkout [Issues](https://github.com/simptive/tahajji/issues) for priority tasks.
+## Credits
 
+Nastaliq Web started as a fork of [Tahajji](https://github.com/simptive/tahajji) by [Yasir Mahmood](https://github.com/simptive), rebuilt from scratch with its own branding, a rewritten detection/rendering engine, and a curated font set. Full credit to the original project for the groundwork this builds on.

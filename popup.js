@@ -1,81 +1,109 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 'use strict';
 
-var changeFont = function(event) {
-	let font = document.querySelector('input[name="fontSelect"]:checked').value;
-	chrome.storage.sync.set({font: font});
-  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    chrome.tabs.sendMessage(tabs[0].id, {message: "urtextApply"}, (response) => {});
-  });
-};
+var MIN_SCALE = 50;
+var MAX_SCALE = 150;
 
-var changeFontSize = function(step){
-  var value = parseInt(document.getElementById('fs-number').value.replace('%',''), 10);
-  value = isNaN(value) ? 100 : value;
-  value+=step;
-  if(step > 0 && value > 150) value = 150;
-  if(step < 0 && value < 50) value = 50;
-  document.getElementById('fs-number').value = value+'%';
+function clamp(value) {
+  if (isNaN(value)) return 100;
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+}
 
-  chrome.storage.sync.set({fontScale: value});
-  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    chrome.tabs.sendMessage(tabs[0].id, {message: "urtextApply"}, (response) => {});
+function notifyActiveTab() {
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { message: 'urtextApply' }, function () {});
   });
 }
 
-var changeLineHeight = function(step){
-  var value = parseInt(document.getElementById('lh-number').value.replace('%',''), 10);
-  value = isNaN(value) ? 100 : value;
-  value+=step;
-  if(step > 0 && value > 150) value = 150;
-  if(step < 0 && value < 50) value = 50;
-  document.getElementById('lh-number').value = value+'%';
-
-  chrome.storage.sync.set({lineScale: value});
-  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    chrome.tabs.sendMessage(tabs[0].id, {message: "urtextApply"}, (response) => {});
-  });
+function setFontSizeField(value) {
+  document.getElementById('fs-number').value = value + '%';
 }
 
-document.querySelectorAll('input[name="fontSelect"]').forEach(radio => {
-	radio.addEventListener('change', changeFont);
-});
+function setLineHeightField(value) {
+  document.getElementById('lh-number').value = value + '%';
+}
 
-document.getElementById('switchActive').addEventListener('change', function(event){
-	document.getElementById('switchActiveLabel').textContent = event.target.checked ? 'Enabled' : 'Disabled'
-	chrome.storage.sync.set({active: event.target.checked});
-	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    chrome.tabs.sendMessage(tabs[0].id, {message: "urtextApply"}, (response) => {});
+function readFontSizeField() {
+  return clamp(parseInt(document.getElementById('fs-number').value, 10));
+}
+
+function readLineHeightField() {
+  return clamp(parseInt(document.getElementById('lh-number').value, 10));
+}
+
+function isLinked() {
+  return document.getElementById('linkSizes').checked;
+}
+
+function applySizes(fontScale, lineScale) {
+  setFontSizeField(fontScale);
+  setLineHeightField(lineScale);
+  chrome.storage.sync.set({ fontScale: fontScale, lineScale: lineScale });
+  notifyActiveTab();
+}
+
+function changeFontSize(step) {
+  var value = clamp(readFontSizeField() + step);
+  applySizes(value, isLinked() ? value : readLineHeightField());
+}
+
+function changeLineHeight(step) {
+  var value = clamp(readLineHeightField() + step);
+  applySizes(isLinked() ? value : readFontSizeField(), value);
+}
+
+function onFontSizeTyped() {
+  var value = readFontSizeField();
+  applySizes(value, isLinked() ? value : readLineHeightField());
+}
+
+function onLineHeightTyped() {
+  var value = readLineHeightField();
+  applySizes(isLinked() ? value : readFontSizeField(), value);
+}
+
+function blurOnEnter(event) {
+  if (event.key === 'Enter') event.target.blur();
+}
+
+document.querySelectorAll('input[name="fontSelect"]').forEach(function (radio) {
+  radio.addEventListener('change', function () {
+    var font = document.querySelector('input[name="fontSelect"]:checked').value;
+    chrome.storage.sync.set({ font: font });
+    notifyActiveTab();
   });
 });
 
-window.addEventListener('load', function(event){
-	chrome.storage.sync.get(['active','font','fontScale','lineScale'], function(data) {
-		document.getElementById('switchActive').checked = data.active;
-		document.getElementById('switchActiveLabel').textContent = data.active ? 'Enabled' : 'Disabled';
-    document.getElementsByName('fontSelect').forEach(radio => {
-      if(radio.value == data.font) radio.setAttribute('checked','');
+document.getElementById('switchActive').addEventListener('change', function (event) {
+  document.getElementById('switchActiveLabel').textContent = event.target.checked ? 'Enabled' : 'Disabled';
+  chrome.storage.sync.set({ active: event.target.checked });
+  notifyActiveTab();
+});
+
+document.getElementById('linkSizes').addEventListener('change', function (event) {
+  var linked = event.target.checked;
+  chrome.storage.sync.set({ sizesLinked: linked });
+  if (linked) applySizes(readFontSizeField(), readFontSizeField());
+});
+
+document.getElementById('fs-increase').addEventListener('click', function () { changeFontSize(5); });
+document.getElementById('fs-decrease').addEventListener('click', function () { changeFontSize(-5); });
+document.getElementById('lh-increase').addEventListener('click', function () { changeLineHeight(5); });
+document.getElementById('lh-decrease').addEventListener('click', function () { changeLineHeight(-5); });
+
+document.getElementById('fs-number').addEventListener('change', onFontSizeTyped);
+document.getElementById('lh-number').addEventListener('change', onLineHeightTyped);
+document.getElementById('fs-number').addEventListener('keydown', blurOnEnter);
+document.getElementById('lh-number').addEventListener('keydown', blurOnEnter);
+
+window.addEventListener('load', function () {
+  chrome.storage.sync.get(['active', 'font', 'fontScale', 'lineScale', 'sizesLinked'], function (data) {
+    document.getElementById('switchActive').checked = data.active;
+    document.getElementById('switchActiveLabel').textContent = data.active ? 'Enabled' : 'Disabled';
+    document.getElementsByName('fontSelect').forEach(function (radio) {
+      radio.checked = (radio.value === data.font);
     });
-    document.getElementById('fs-number').value = data.fontScale+'%';
-    document.getElementById('lh-number').value = data.lineScale+'%';
-	});
-});
-
-document.getElementById('fs-increase').addEventListener('click', function(event){
-  changeFontSize(5);
-});
-
-document.getElementById('fs-decrease').addEventListener('click', function(event){
-  changeFontSize(-5);
-});
-
-document.getElementById('lh-increase').addEventListener('click', function(event){
-  changeLineHeight(5);
-});
-
-document.getElementById('lh-decrease').addEventListener('click', function(event){
-  changeLineHeight(-5);
+    setFontSizeField(data.fontScale);
+    setLineHeightField(data.lineScale);
+    document.getElementById('linkSizes').checked = data.sizesLinked !== false;
+  });
 });

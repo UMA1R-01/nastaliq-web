@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Tahajji - Urdu Reader",
-  "version": "1.2",
-  "description": "Read and Write Urdu in beautiful fonts using this open source extension.",
+  "name": "Nastaliq Web",
+  "version": "1.0.0",
+  "description": "Read Urdu in proper Nastaliq fonts on any website — Jameel Noori, Mehr Nastaliq and more, with adjustable size and line height.",
   "permissions": [ "storage", "scripting" ],
   "host_permissions": [ "<all_urls>" ],
   "background" : {
     "service_worker": "background.js"
   },
   "action": {
-    "default_name": "Urdu Reader",
+    "default_name": "Nastaliq Web",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "images/16.png",
@@ -24,7 +24,6 @@
     "48": "images/48.png",
     "128": "images/128.png"
   },
-  "options_page": "options.html",
   "web_accessible_resources": [{
     "resources": ["*.woff2", "*.ttf"],
     "matches": ["<all_urls>"]
