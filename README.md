@@ -57,7 +57,7 @@ Changes apply immediately to the page you're viewing.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). See the [Privacy Policy](PRIVACY.md) for what data the extension does (and doesn't) handle.
 
 ## Credits
 
