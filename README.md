@@ -4,6 +4,10 @@
 
 <h1 align="center">Nastaliq Web</h1>
 
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/nastaliq-web/ehojjjghbknejahioeffmllflhbfjgjk"><img src="https://img.shields.io/chrome-web-store/v/ehojjjghbknejahioeffmllflhbfjgjk?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white&color=4285F4" alt="Available in the Chrome Web Store"></a>
+</p>
+
 **Nastaliq Web** is a Chrome extension that re-renders Urdu text on any webpage in a proper Nastaliq typeface, instead of whatever default font the site ships with — no more squashed, hard-to-read Urdu on sites that only bother styling English.
 
 ![Same Urdu paragraph in a default fallback font versus Nastaliq Web's default font](images/comparison.png)
@@ -26,13 +30,18 @@ Most websites either serve Urdu in a flat, hard-to-read font or don't style it f
 
 ## Install
 
-Nastaliq Web isn't on the Chrome Web Store yet, so for now it installs the same way any unpacked extension does:
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/nastaliq-web/ehojjjghbknejahioeffmllflhbfjgjk)** — one click, and it updates itself automatically.
+
+<details>
+<summary>Install manually instead (unpacked, from source)</summary>
 
 1. Download the latest release: **[Releases → nastaliq-web.zip](https://github.com/UMA1R-01/nastaliq-web/releases/latest)**
 2. Unzip it somewhere you'll keep it (don't delete the folder afterwards — Chrome loads the extension directly from it).
 3. Open `chrome://extensions` in Chrome.
 4. Turn on **Developer mode** (top-right toggle).
 5. Click **Load unpacked** and select the unzipped folder.
+
+</details>
 
 That's it — the Nastaliq Web icon should appear in your toolbar, and Urdu text on any page you visit will switch to the default font automatically.
 
