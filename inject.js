@@ -186,7 +186,7 @@
       typeof node.querySelectorAll === 'undefined') return;
     if (node.nodeName === '#document') node = document.body;
 
-    chrome.storage.sync.get(['active', 'font', 'fontScale', 'lineScale'], function (data) {
+    chrome.storage.local.get(['active', 'font', 'fontScale', 'lineScale'], function (data) {
       data.active ? fontApply(node, data) : clearSubtree(node);
     });
   }

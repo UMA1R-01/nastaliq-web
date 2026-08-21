@@ -37,7 +37,7 @@ function isLinked() {
 function applySizes(fontScale, lineScale) {
   setFontSizeField(fontScale);
   setLineHeightField(lineScale);
-  chrome.storage.sync.set({ fontScale: fontScale, lineScale: lineScale });
+  chrome.storage.local.set({ fontScale: fontScale, lineScale: lineScale });
   notifyActiveTab();
 }
 
@@ -68,20 +68,20 @@ function blurOnEnter(event) {
 document.querySelectorAll('input[name="fontSelect"]').forEach(function (radio) {
   radio.addEventListener('change', function () {
     var font = document.querySelector('input[name="fontSelect"]:checked').value;
-    chrome.storage.sync.set({ font: font });
+    chrome.storage.local.set({ font: font });
     notifyActiveTab();
   });
 });
 
 document.getElementById('switchActive').addEventListener('change', function (event) {
   document.getElementById('switchActiveLabel').textContent = event.target.checked ? 'Enabled' : 'Disabled';
-  chrome.storage.sync.set({ active: event.target.checked });
+  chrome.storage.local.set({ active: event.target.checked });
   notifyActiveTab();
 });
 
 document.getElementById('linkSizes').addEventListener('change', function (event) {
   var linked = event.target.checked;
-  chrome.storage.sync.set({ sizesLinked: linked });
+  chrome.storage.local.set({ sizesLinked: linked });
   if (linked) applySizes(readFontSizeField(), readFontSizeField());
 });
 
@@ -96,7 +96,7 @@ document.getElementById('fs-number').addEventListener('keydown', blurOnEnter);
 document.getElementById('lh-number').addEventListener('keydown', blurOnEnter);
 
 window.addEventListener('load', function () {
-  chrome.storage.sync.get(['active', 'font', 'fontScale', 'lineScale', 'sizesLinked'], function (data) {
+  chrome.storage.local.get(['active', 'font', 'fontScale', 'lineScale', 'sizesLinked'], function (data) {
     document.getElementById('switchActive').checked = data.active;
     document.getElementById('switchActiveLabel').textContent = data.active ? 'Enabled' : 'Disabled';
     document.getElementsByName('fontSelect').forEach(function (radio) {

@@ -17,14 +17,32 @@ function injectFiles(tabId) {
   });
 }
 
-chrome.runtime.onInstalled.addListener(function () {
-  chrome.storage.sync.set({
-    active: true,
-    font: 'jameel-noori-nastaleeq',
-    fontScale: 100,
-    lineScale: 100,
-    sizesLinked: true
-  });
+chrome.runtime.onInstalled.addListener(function (details) {
+  if (details.reason === 'install') {
+    // Only ever set defaults on a genuine first install -- onInstalled also
+    // fires on every update, and unconditionally resetting here previously
+    // wiped every user's settings back to defaults each time the extension
+    // updated.
+    chrome.storage.local.set({
+      active: true,
+      font: 'jameel-noori-nastaleeq',
+      fontScale: 100,
+      lineScale: 100,
+      sizesLinked: true
+    });
+  } else if (details.reason === 'update') {
+    // One-time migration: earlier versions stored settings in chrome.storage.sync,
+    // which syncs across devices/profiles and could silently overwrite local
+    // changes as a normal side effect of that reconciliation. Carry any existing
+    // sync settings over to local storage (which this version reads from), then
+    // stop using sync so that can't happen again.
+    chrome.storage.sync.get(['active', 'font', 'fontScale', 'lineScale', 'sizesLinked'], function (old) {
+      if (Object.keys(old).length > 0) {
+        chrome.storage.local.set(old);
+        chrome.storage.sync.clear();
+      }
+    });
+  }
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo) {
