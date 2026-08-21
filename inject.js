@@ -92,8 +92,13 @@
   function clearSubtree(root) {
     if (!root) return;
     var candidates = [];
-    if (root.nodeType === Node.ELEMENT_NODE) {
-      if (root.matches('.urtext-parent, .urtext-self')) candidates.push(root);
+    // A shadow root is a DocumentFragment, not an Element -- .matches() doesn't
+    // exist on it, but .querySelectorAll() does, so it can still contribute
+    // descendant candidates even though it can never match itself.
+    if (root.nodeType === Node.ELEMENT_NODE && root.matches('.urtext-parent, .urtext-self')) {
+      candidates.push(root);
+    }
+    if (root.nodeType === Node.ELEMENT_NODE || root.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
       root.querySelectorAll('.urtext-parent, .urtext-self').forEach(function (el) { candidates.push(el); });
     }
     candidates.forEach(function (el) {
@@ -129,7 +134,9 @@
       }
       return;
     }
-    var isDocumentRoot = node.nodeType === Node.DOCUMENT_NODE;
+    // A shadow root's nodeType is DOCUMENT_FRAGMENT_NODE, not DOCUMENT_NODE --
+    // treat it the same as a root so traversal descends into shadow trees too.
+    var isDocumentRoot = node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
     var isPlainElement = node.nodeType === Node.ELEMENT_NODE && !node.classList.contains('urtext-self');
     if (isDocumentRoot || isPlainElement) {
       Array.prototype.slice.call(node.childNodes).forEach(function (child) { recursiveApply(child, data); });
@@ -187,16 +194,52 @@
   chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.message === 'urtextApply') {
       actionApply(document);
+      knownShadowRoots.forEach(function (root) { actionApply(root); });
       sendResponse({ success: true });
     }
   });
 
-  var observer = new MutationObserver(function (mutations) {
-    mutations.forEach(function (mutation) {
-      for (var i = 0; i < mutation.addedNodes.length; i++) actionApply(mutation.addedNodes[i]);
+  // Sites built with web components (YouTube, and most modern SPAs) render
+  // real content inside shadow roots, which a light-DOM-only observer/
+  // traversal never sees. Track every OPEN shadow root we find so we can
+  // apply/clear text in them too, and watch each one for its own mutations
+  // (mutations inside a shadow root do not bubble to an outside observer).
+  // Closed shadow roots are inherently inaccessible to any script -- there's
+  // no workaround for those.
+  var knownShadowRoots = [];
+
+  function observeRoot(root) {
+    var obs = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        for (var i = 0; i < mutation.addedNodes.length; i++) {
+          var added = mutation.addedNodes[i];
+          actionApply(added);
+          discoverShadowRoots(added);
+        }
+      });
     });
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+    obs.observe(root, { childList: true, subtree: true });
+  }
+
+  function registerShadowRoot(root) {
+    knownShadowRoots.push(root);
+    observeRoot(root);
+    actionApply(root);
+    discoverShadowRoots(root);
+  }
+
+  function discoverShadowRoots(node) {
+    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
+    if (node.nodeType === Node.ELEMENT_NODE && node.shadowRoot && knownShadowRoots.indexOf(node.shadowRoot) === -1) {
+      registerShadowRoot(node.shadowRoot);
+    }
+    node.querySelectorAll('*').forEach(function (el) {
+      if (el.shadowRoot && knownShadowRoots.indexOf(el.shadowRoot) === -1) registerShadowRoot(el.shadowRoot);
+    });
+  }
+
+  observeRoot(document.documentElement);
+  discoverShadowRoots(document.documentElement);
 
   document.querySelectorAll('input,textarea').forEach(function (input) {
     input.addEventListener('input', function (event) { actionApply(event.target); });
