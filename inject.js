@@ -32,13 +32,7 @@
     var baseHeight = el.getAttribute('data-urtext-baselineheight');
     if (baseSize === null) {
       baseSize = parseFloat(window.getComputedStyle(el).fontSize);
-      // line-height computes to the keyword "normal" (not a px number) when
-      // nothing in the cascade sets it explicitly -- parseFloat('normal') is
-      // NaN, which would otherwise end up as an invalid "line-height:NaNpx"
-      // (silently ignored by the browser, but wrong). ~1.2x font-size is the
-      // standard approximation browsers use for "normal".
-      var computedLineHeight = parseFloat(window.getComputedStyle(el).lineHeight);
-      baseHeight = isNaN(computedLineHeight) ? baseSize * 1.2 : computedLineHeight;
+      baseHeight = parseFloat(window.getComputedStyle(el).lineHeight);
       el.setAttribute('data-urtext-basefontsize', baseSize);
       el.setAttribute('data-urtext-baselineheight', baseHeight);
     } else {
@@ -98,13 +92,8 @@
   function clearSubtree(root) {
     if (!root) return;
     var candidates = [];
-    // A shadow root is a DocumentFragment, not an Element -- .matches() doesn't
-    // exist on it, but .querySelectorAll() does, so it can still contribute
-    // descendant candidates even though it can never match itself.
-    if (root.nodeType === Node.ELEMENT_NODE && root.matches('.urtext-parent, .urtext-self')) {
-      candidates.push(root);
-    }
-    if (root.nodeType === Node.ELEMENT_NODE || root.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+    if (root.nodeType === Node.ELEMENT_NODE) {
+      if (root.matches('.urtext-parent, .urtext-self')) candidates.push(root);
       root.querySelectorAll('.urtext-parent, .urtext-self').forEach(function (el) { candidates.push(el); });
     }
     candidates.forEach(function (el) {
@@ -140,9 +129,7 @@
       }
       return;
     }
-    // A shadow root's nodeType is DOCUMENT_FRAGMENT_NODE, not DOCUMENT_NODE --
-    // treat it the same as a root so traversal descends into shadow trees too.
-    var isDocumentRoot = node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+    var isDocumentRoot = node.nodeType === Node.DOCUMENT_NODE;
     var isPlainElement = node.nodeType === Node.ELEMENT_NODE && !node.classList.contains('urtext-self');
     if (isDocumentRoot || isPlainElement) {
       Array.prototype.slice.call(node.childNodes).forEach(function (child) { recursiveApply(child, data); });
@@ -185,25 +172,10 @@
   }
 
   function actionApply(node) {
-    if (chrome.runtime == undefined || chrome.runtime.id == undefined) return;
-
-    // A mutation's addedNodes can contain a bare Text node directly -- e.g.
-    // when a reused element (like a tooltip that updates in place across
-    // hovers instead of being recreated) has its content replaced via
-    // el.textContent = "...". recursiveApply() already knows how to handle
-    // text nodes, but only ever reaches them by walking down from an
-    // element; a text node arriving here as the mutation target itself
-    // needs handling directly, or it's silently dropped by the
-    // querySelectorAll check below (which text nodes don't have).
-    if (node.nodeType === Node.TEXT_NODE) {
-      chrome.storage.local.get(['active', 'font', 'fontScale', 'lineScale'], function (data) {
-        if (data.active && hasUrduScript(node.textContent)) wrapRuns(node, data);
-      });
-      return;
-    }
-
-    // Skip nodes that can't meaningfully carry Urdu text or can't be queried into.
-    if (['IMG', 'IFRAME', 'SCRIPT', 'LINK', 'STYLE'].indexOf(node.nodeName) > -1 ||
+    // 1. On re-installation this script may go orphan; checking runtime avoids a fatal error.
+    // 2. Skip nodes that can't meaningfully carry Urdu text or can't be queried into.
+    if (chrome.runtime == undefined || chrome.runtime.id == undefined ||
+      ['IMG', 'IFRAME', 'SCRIPT', 'LINK', 'STYLE'].indexOf(node.nodeName) > -1 ||
       typeof node.querySelectorAll === 'undefined') return;
     if (node.nodeName === '#document') node = document.body;
 
@@ -215,52 +187,16 @@
   chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.message === 'urtextApply') {
       actionApply(document);
-      knownShadowRoots.forEach(function (root) { actionApply(root); });
       sendResponse({ success: true });
     }
   });
 
-  // Sites built with web components (YouTube, and most modern SPAs) render
-  // real content inside shadow roots, which a light-DOM-only observer/
-  // traversal never sees. Track every OPEN shadow root we find so we can
-  // apply/clear text in them too, and watch each one for its own mutations
-  // (mutations inside a shadow root do not bubble to an outside observer).
-  // Closed shadow roots are inherently inaccessible to any script -- there's
-  // no workaround for those.
-  var knownShadowRoots = [];
-
-  function observeRoot(root) {
-    var obs = new MutationObserver(function (mutations) {
-      mutations.forEach(function (mutation) {
-        for (var i = 0; i < mutation.addedNodes.length; i++) {
-          var added = mutation.addedNodes[i];
-          actionApply(added);
-          discoverShadowRoots(added);
-        }
-      });
+  var observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
+      for (var i = 0; i < mutation.addedNodes.length; i++) actionApply(mutation.addedNodes[i]);
     });
-    obs.observe(root, { childList: true, subtree: true });
-  }
-
-  function registerShadowRoot(root) {
-    knownShadowRoots.push(root);
-    observeRoot(root);
-    actionApply(root);
-    discoverShadowRoots(root);
-  }
-
-  function discoverShadowRoots(node) {
-    if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
-    if (node.nodeType === Node.ELEMENT_NODE && node.shadowRoot && knownShadowRoots.indexOf(node.shadowRoot) === -1) {
-      registerShadowRoot(node.shadowRoot);
-    }
-    node.querySelectorAll('*').forEach(function (el) {
-      if (el.shadowRoot && knownShadowRoots.indexOf(el.shadowRoot) === -1) registerShadowRoot(el.shadowRoot);
-    });
-  }
-
-  observeRoot(document.documentElement);
-  discoverShadowRoots(document.documentElement);
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 
   document.querySelectorAll('input,textarea').forEach(function (input) {
     input.addEventListener('input', function (event) { actionApply(event.target); });

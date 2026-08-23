@@ -10,14 +10,7 @@ function clamp(value) {
 
 function notifyActiveTab() {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    if (!tabs[0]) return;
-    chrome.tabs.sendMessage(tabs[0].id, { message: 'urtextApply' }, function () {
-      // No content script on this tab (chrome://, the Web Store, a PDF viewer,
-      // etc. -- Chrome blocks injection there) -- reading lastError here just
-      // tells Chrome the failure was handled, so it stops logging it as an
-      // unchecked error. There's nothing to style on those tabs anyway.
-      void chrome.runtime.lastError;
-    });
+    if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { message: 'urtextApply' }, function () {});
   });
 }
 
