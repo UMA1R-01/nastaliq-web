@@ -32,7 +32,13 @@
     var baseHeight = el.getAttribute('data-urtext-baselineheight');
     if (baseSize === null) {
       baseSize = parseFloat(window.getComputedStyle(el).fontSize);
-      baseHeight = parseFloat(window.getComputedStyle(el).lineHeight);
+      // line-height computes to the keyword "normal" (not a px number) when
+      // nothing in the cascade sets it explicitly -- parseFloat('normal') is
+      // NaN, which would otherwise end up as an invalid "line-height:NaNpx"
+      // (silently ignored by the browser, but wrong). ~1.2x font-size is the
+      // standard approximation browsers use for "normal".
+      var computedLineHeight = parseFloat(window.getComputedStyle(el).lineHeight);
+      baseHeight = isNaN(computedLineHeight) ? baseSize * 1.2 : computedLineHeight;
       el.setAttribute('data-urtext-basefontsize', baseSize);
       el.setAttribute('data-urtext-baselineheight', baseHeight);
     } else {
@@ -179,10 +185,25 @@
   }
 
   function actionApply(node) {
-    // 1. On re-installation this script may go orphan; checking runtime avoids a fatal error.
-    // 2. Skip nodes that can't meaningfully carry Urdu text or can't be queried into.
-    if (chrome.runtime == undefined || chrome.runtime.id == undefined ||
-      ['IMG', 'IFRAME', 'SCRIPT', 'LINK', 'STYLE'].indexOf(node.nodeName) > -1 ||
+    if (chrome.runtime == undefined || chrome.runtime.id == undefined) return;
+
+    // A mutation's addedNodes can contain a bare Text node directly -- e.g.
+    // when a reused element (like a tooltip that updates in place across
+    // hovers instead of being recreated) has its content replaced via
+    // el.textContent = "...". recursiveApply() already knows how to handle
+    // text nodes, but only ever reaches them by walking down from an
+    // element; a text node arriving here as the mutation target itself
+    // needs handling directly, or it's silently dropped by the
+    // querySelectorAll check below (which text nodes don't have).
+    if (node.nodeType === Node.TEXT_NODE) {
+      chrome.storage.local.get(['active', 'font', 'fontScale', 'lineScale'], function (data) {
+        if (data.active && hasUrduScript(node.textContent)) wrapRuns(node, data);
+      });
+      return;
+    }
+
+    // Skip nodes that can't meaningfully carry Urdu text or can't be queried into.
+    if (['IMG', 'IFRAME', 'SCRIPT', 'LINK', 'STYLE'].indexOf(node.nodeName) > -1 ||
       typeof node.querySelectorAll === 'undefined') return;
     if (node.nodeName === '#document') node = document.body;
 
