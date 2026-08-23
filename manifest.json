@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nastaliq Web",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Read Urdu in proper Nastaliq fonts on any website — Jameel Noori, Mehr Nastaliq and more, with adjustable size and line height.",
   "permissions": [ "storage", "scripting" ],
   "host_permissions": [ "<all_urls>" ],

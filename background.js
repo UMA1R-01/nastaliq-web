@@ -9,7 +9,9 @@ function injectFiles(tabId) {
     if (chrome.runtime.lastError || !results || !results.length) return;
     if (results[0].result === true) {
       // script already loaded in this frame, just re-apply in case settings changed
-      chrome.tabs.sendMessage(tabId, { message: 'urtextApply' }, () => {});
+      chrome.tabs.sendMessage(tabId, { message: 'urtextApply' }, () => {
+        void chrome.runtime.lastError; // tab may have navigated away between executeScript and here -- nothing to do
+      });
     } else {
       chrome.scripting.insertCSS({ target: { tabId: tabId, allFrames: true }, files: ['css/inject.css'] });
       chrome.scripting.insertCSS({ target: { tabId: tabId, allFrames: true }, files: ['css/fonts.css'] });
